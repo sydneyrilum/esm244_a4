@@ -1,0 +1,34 @@
+---
+title: "Bootstrapped Confidence Interval for Proportions"
+author: "Sydney Rilum"
+date: "3/3/2021"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+In the study, 22 out of 36 surveyed UCSB community members (61%) identifying as nonbinary/genderqueer responded that they had personally experienced “exclusionary, offensive, hostile or intimidating conduct” (compared to 26% and 19% for those identifying as women and men, respectively). 
+
+Your goal is to find a confidence interval for the proportion of nonbinary/genderqueer students experiencing exclusionary, hostile or intimidating experience at UCSB using bootstrapping. Create a vector reflecting the collected survey data (n = 36), then find the bootstrapped 95% confidence interval for the proportion of genderqueer individuals experiencing exclusionary conduct based on the 2014 UCSB survey data.
+ 
+Hint: this task will require you to recreate the data and create a function that calculates the proportion of a specified outcome for each bootstrap sample. The proportions for each bootstrap sample are what will be plotted in your histogram below.
+
+
+1) Include any code you wrote to make the original sample vector, create the “proportions function,” and find bootstrap samples (use at least 10,000 bootstrap samples here).
+
+2) A histogram of bootstrapped proportions (does not need to be finalized). The histogram should show up in your knitted HTML. 
+
+3) A final statement (in text) describing the bootstrapped CI in the context of the data (suitable for publication).
+
+
+
+<br>
+
+#### Citation:
+
+[2014 UCSB Campus Climate Project Final Report, prepared by Rankin & Associates Consulting](http://campusclimate.ucop.edu/_common/files/pdf-climate/ucsb-full-report.pdf)
