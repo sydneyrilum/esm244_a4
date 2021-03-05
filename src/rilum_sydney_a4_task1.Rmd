@@ -19,32 +19,27 @@ library(ggdendro)
 ```{r}
 # Read in the data
 watersheds <- read_csv(here("data", "sbc_lter_registered_stream_chemistry.csv")) %>% 
-  replace_with_na_all(condition = ~.x == -999.0)  # replace -999.0 values to NA
+  replace_with_na_all(condition = ~.x == -999.0)  # replace -999.0 values with NA
 ```
 
+### Agglomerative Hierarchical Clustering by Complete Linkage
+
 ```{r}
-# Create a data frame with a single summary row per site (containing calculated means for each variable)
+# Create a data frame with a single summary row per site
 watersheds_summary <- watersheds %>%
   select(-timestamp_local) %>%  # remove time observations column
   group_by(site_code) %>% 
-  summarize_all(mean, na.rm = TRUE)
+  summarize_all(mean, na.rm = TRUE) %>%  # calculate means for each variable per site
+  drop_na()  # remove sites with NA values
 
-
-#### remove sites with Na values????
-
-
-# Scale the numeric variables data (columns 3:12)
+# Scale numeric data
 watersheds_scaled <- watersheds_summary %>% 
   select(2:11) %>% 
   scale()
   
-# Add rownames (watershed site_code) from watersheds_summary dataset
+# Add rownames (site_code) from watersheds_summary dataset
 rownames(watersheds_scaled) <- watersheds_summary$site_code
-```
 
-### Perform agglomeratuve hierarchical clustering by complete linkage
-
-```{r}
 # Find the Euclidean distances (dissimilarity matrix)
 euc_distance <- dist(watersheds_scaled, method = "euclidean")
 
@@ -55,12 +50,12 @@ hc_complete <- stats::hclust(euc_distance, method = "complete" )
 ggdendrogram(hc_complete, 
              rotate = TRUE) +
   theme_minimal() +
-  labs(x = "Watershed Site Code")
+  labs(x = "Watershed Site Code",
+       y = "Euclidean distance of scaled values",
+       title = "Multivariate Clustering for Santa Barbara Water Chemistry by Site")
 ```
 
-**Figure 1.** A dendrogram displaying multivariate clustering for water stream chemistry by Santa Barbara LTER watershed site, created using hierarchical clustering by complete linkage. Water chemistry measurements data set includes dissolved nitrogen (nitrate, ammonium, total dissolved nitrogen), soluble reactive phosphorus (SRP), particulate organic carbon, nitrogen and phosphorus, total suspended sediments, and conductivity measurements from 2000 - 2018. (Data: Santa Barbara Coastal LTER 2019). 
-
-Complete linkage merges clusters by the smallest *maximum* distance between two observations in distinct clusters.
+**Figure 1.** A dendrogram displaying multivariate clustering for water stream chemistry by Santa Barbara LTER watershed site, created using hierarchical clustering by complete linkage (merging clusters by the smallest maximum distance between two observations in distinct clusters). Water chemistry measurements were taken from 2000 - 2018 for the following variables: dissolved nitrogen (nitrate, ammonium, total dissolved nitrogen), soluble reactive phosphorus, particulate organic carbon, nitrogen and phosphorus, total suspended sediments, and conductivity. (Data: Santa Barbara Coastal LTER 2019). 
 
 <br>
 
