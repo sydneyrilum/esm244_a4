@@ -8,24 +8,59 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(tidyverse)
+library(boot)
 ```
 
-In the study, 22 out of 36 surveyed UCSB community members (61%) identifying as nonbinary/genderqueer responded that they had personally experienced “exclusionary, offensive, hostile or intimidating conduct” (compared to 26% and 19% for those identifying as women and men, respectively). 
+### Introduction
 
-Your goal is to find a confidence interval for the proportion of nonbinary/genderqueer students experiencing exclusionary, hostile or intimidating experience at UCSB using bootstrapping. Create a vector reflecting the collected survey data (n = 36), then find the bootstrapped 95% confidence interval for the proportion of genderqueer individuals experiencing exclusionary conduct based on the 2014 UCSB survey data.
- 
-Hint: this task will require you to recreate the data and create a function that calculates the proportion of a specified outcome for each bootstrap sample. The proportions for each bootstrap sample are what will be plotted in your histogram below.
+In a 2014 UCSB Campus Climate Project study, 22 out of 36 surveyed UCSB community members (61%) identifying as nonbinary/genderqueer responded that they had personally experienced “exclusionary, offensive, hostile or intimidating conduct” (compared to 26% and 19% for those identifying as women and men, respectively). In this document, a 95% confidence interval for the proportion of nonbinary/genderqueer students experiencing exclusionary, hostile or intimidating conduct at UCSB will be determined using bootstrapping. 
 
+### Bootstrapping
 
-1) Include any code you wrote to make the original sample vector, create the “proportions function,” and find bootstrap samples (use at least 10,000 bootstrap samples here).
+```{r}
+# Create original sample vector
+sample_vec <- rep(c(1,0), times = c(22,14))
 
-2) A histogram of bootstrapped proportions (does not need to be finalized). The histogram should show up in your knitted HTML. 
+# Create a function that will calculate the proportions of each bootstrapped sample
+proportion_fun <- function (x,i) {mean(x[i])}
 
-3) A final statement (in text) describing the bootstrapped CI in the context of the data (suitable for publication).
+# Find 10,000 bootstrap samples by resampling from the original vector and calculating the proportions of eahc (using the proportions function)
+sample_10k <- boot(sample_vec, 
+                   statistic = proportion_fun,
+                   R = 10000)
+# sample_10k
+```
 
+```{r}
+# View original sample mean
+#sample_10k$t0
 
+# View all the proportions for each of the 10k bootstrap samples
+#sample_10k$t 
+
+# Make vector of bootstrap sample means a data frame (for ggplot use) 
+sample_10k_df <- data.frame(bs_proportion = sample_10k$t)
+
+# Histogram of 10k bootstrap sample proportions:
+ggplot(data = sample_10k_df, aes(x =bs_proportion)) +
+  geom_histogram() +
+  theme_minimal() +
+  labs(x = "bootstrapped proportion",
+       y = "count",
+       title = "Proportions of Genderqueer Students Experiencing Exclusionary Conduct")
+```
+
+**Figure 1.** A histogram of bootstrapped proportions of nonbinary/genderqueer students experiencing exclusionary, hostile or intimidating conduct at UCSB in 2014, using 10,000 bootstrapped samples created from the original 36 community member sample. (Data: 2014 UCSB Campus Climate Project Final Report).
+
+```{r}
+# Use `boot.ci()` to find the confidence interval for the bootstrapped distribution (with 10k bootstrapped means):
+ci <- boot.ci(sample_10k, conf = 0.95)
+# ci
+```
+
+The bootstrapped 95% confidence interval of 0.45 to 0.77 means that we expect 95 of 100 calculated confidence intervals within that range to contain the actual proportion of genderqueer individuals experiencing exclusionary conduct, based on the 2014 UCSB survey data.
 
 <br>
 

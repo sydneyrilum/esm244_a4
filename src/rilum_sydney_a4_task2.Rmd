@@ -14,7 +14,14 @@ library(here)
 library(janitor)
 library(broom)
 library(nlstools)
+library(gt)
 ```
+
+### Introduction
+
+In this document, nonlinear least squares will be utilized to estimate parameters for an equation that represents the increase in global wild fish catch from 1950 – 2012. Nonlinear least squares converges on parameter estimates that minimize the sum of squares of residuals through an iterative algorithm.
+
+### Exploratory Graphs
 
 ```{r}
 # Read in the data
@@ -22,28 +29,38 @@ fish_catch <- read_csv(here("data", "fish_catch.csv")) %>%
   row_to_names(row_number = 2) %>%  # convert second row to column headers
   clean_names() %>% 
   slice(-(1:2), -(66:69)) %>%  # remove rows with notes/information
-  mutate(years = 0:62) %>%  # Create a new column numbering years starting at 0 (1950 = 0)
-  mutate(wild_catch = as.numeric(wild_catch))
-
+  mutate(years = 0:62) %>%  # create a new column numbering years starting at 0 (1950 = 0)
+  mutate(wild_catch = as.numeric(wild_catch)) %>% 
+  mutate(year = as.numeric(year))
 ```
 
-### Exploratory Graph
 ```{r}
 # Exploratory graph
-ggplot(data = fish_catch, aes(x = years, y = wild_catch)) +
-  geom_point() +
+ggplot(data = fish_catch, aes(x = year, y = wild_catch)) +
+  geom_line() +
   theme_minimal() +
-  labs(x = "Time (years)", y = "Wild catch (million tons)")
-
+  labs(x = "Time (years)", 
+       y = "Wild catch (million tons)")
 ```
 
-**Figure 1.** Exploratory graph of world wild fish catch (in millions of tons) over time (in years) from 1950 - 2012. (Data: ?????????)
+**Figure 1.** Exploratory graph of world wild fish catch (in millions of tons) over time (in years) from 1950 – 2012. (Data: U.N. Food and Agriculture Organization (FAO))
 
-In text below the exploratory graph: What type of relationship describes the trend? What does that look like mathematically (include an equation, possibly using LaTeX)? What are your initial estimates for the parameters in the model? 
+```{r}
+# Exploratory graph of log transformed data
+ggplot(data = fish_catch, aes(x = year, y = log(wild_catch))) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (years)", 
+       y = "ln(Wild catch (million tons))")
+```
 
-From the exploratory plot, there appears to be a logistic trend of wild fish catch over time, with an increase in wild catch at a relatively constant rate that eventually plateaus off at around 40 years. 
+**Figure 2.** Exploratory graph of log transformed world wild fish catch (in millions of tons) over time (in years) from 1950 – 2012. (Data: U.N. FAO)
 
-Mathematically, the wild catch data appears to follow the logistic growth equation: 
+<br>
+
+From the exploratory plots, there appears to be a logistic trend of wild fish catch over time. Wild fish catch increases exponentially until 1990 and then plateaus out, remaining relatively constant until 2012. 
+
+Mathematically, wild fish catch data can be described by the logistic growth equation: 
 
 $P(t)=\frac{K}{1+Ae^{-kt}}$, where
 
@@ -51,8 +68,9 @@ $P(t)=\frac{K}{1+Ae^{-kt}}$, where
 - $A$ is $\frac{K-P_0}{P_0}$
 - $k$ is the growth rate constant
 
+<br>
 
-### Finding initial estimates for logistic growth parameters: *K*, *A* and *k*
+### Initial estimates for logistic growth parameters: *K*, *A* and *k*
 
 ```{r}
 # Estimate the growth constant during exponential phase (to get a starting-point guess for *k*): 
@@ -62,8 +80,8 @@ fish_catch_exp <- fish_catch %>%
   
 # Model linear to get *k* estimate (the slope of this linear equation is an estimate of the growth rate constant):
 lm_k <- lm(ln_wild_catch ~ years, data = fish_catch_exp)
-lm_k
 
+# lm_k
 # Coefficient (k) ~ 0.04
 ```
 
@@ -71,44 +89,58 @@ Initial estimates for model parameters:
 
 - $K$ ~ 90
 - $A$ ~ 4.23
-(90-17.2)/17.2 = 4.23
 - $k$ ~ 0.04
 
-Now we have initial estimate for *k* (0.04), and we can estimate *K* ~ 90 and *A* ~ 4.23. These estimates will be used as starting points for interactive algorithms trying to converge on the parameters.
+These estimates will be used as starting points for interactive algorithms used in nonlinear least squares that try to converge on the parameters.
 
+<br>
 
-### Using nonlinear least squares to find parameters for logistic model describing wild catch
-
-Nonlinear least squares converges on parameter estimates that minimize the sum of squares of residuals through an iterative algorithm.
+### Find parameters for logistic model using nonlinear least squares
 
 ```{r}
 # Enter model information, with a list of estimated starting parameter values:
-fish_catch_nls <- nls(wild_catch ~ K/(1 + A*exp(-r*years)),
+fish_catch_nls <- nls(wild_catch ~ K/(1 + A*exp(-k*years)),
               data = fish_catch,
-              start = list(K = 90, A = 4.23, r = 0.04),
-              trace = TRUE
-              )
+              start = list(K = 90, A = 4.23, k = 0.04),
+              trace = FALSE)
 
 # See the model summary (null hypothesis: parameter value = 0)
-summary(fish_catch_nls)
+# summary(fish_catch_nls)
 
 # Use broom:: functions to get model outputs in tidier format: 
 model_output <- broom::tidy(fish_catch_nls)
-
 ```
 
-###########Report the parameter outcomes (with units) in text or a table.######################
+**Table 1.** Logistic model parameter estimates generated from nonlinear least squares, to be used to describe wild fish catch data.
 
-For Task 2, you will find an equation with parameters estimated by nonlinear least squares for the increase in global wild fish catch from 1950 – 2012. 
+```{r}
+# Finalized table
+model_output %>% 
+  gt() %>% 
+  fmt_number(columns = vars(estimate, std.error, statistic),
+             decimals = 2) %>% 
+  fmt_scientific(columns = vars(p.value),
+                 decimals = 2) %>% 
+  tab_options(table.width = pct(70),
+              table.align = "left") %>% 
+  cols_label(term = "Term",
+             estimate = "Estimate",
+             std.error = "Standard Error",
+             statistic = "Statistic",
+             p.value = "p-value") %>%
+  tab_header(title = "Parameter Estimates")%>% 
+  tab_footnote(footnote = "Units: K = million tons wild catch, A = unitless, k = million tons wild catch/year",
+               locations = cells_column_labels(columns = vars(term)))
+```
 
-The wild catch logistic model with estimated parameters is:
-$$P(t) = \frac{100.3}{1+4.32e^{-0.07t}}$$
+<br>
 
+The wild fish catch logistic model with estimated parameters can be written as:
+$$P(t) = \frac{100.28}{1+4.32e^{-0.07t}}$$
 
+<br>
 
-### Visualize logisitc model over original wild catch data
-
-4) Prepare a finalized (publication quality) graph showing both the original data and your model output.
+### Visualize logistic model over original wild catch data
 
 ```{r}
 # Make predictions of wild catch for each year in the original data frame
@@ -124,18 +156,14 @@ ggplot(data = fish_catch_complete, aes(x = years, y = wild_catch)) +
             color = "red") +
   theme_minimal() +
   labs(x = "Time (years)",
-       y = "Wild catch (million tons)")
+       y = "Wild catch (million tons)",
+       title = "Global Wild Fish Catch from 1950 – 2012")
 
-```
-
-**Figure 2.** ????
-
-```{r}
 # Find confidence intervals for parameter estimates
 fish_catch_ci <- confint2(fish_catch_nls)
-fish_catch_ci
 ```
 
+**Figure 3.** A plot displaying the logistic model output (red line) for wild fish catch over time in years against the original wild fish catch data (black points). 
 
 <br>
 
